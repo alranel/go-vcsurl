@@ -20,11 +20,6 @@ func IsGitLab(url *url.URL) bool {
 	return url.Host == "gitlab.com"
 }
 
-// IsRaw returns true if the supplied URL points to a raw file or directory.
-func IsRaw(url *url.URL) bool {
-	return url.Host == "raw.githubusercontent.com"
-}
-
 // IsAccount returns true if the supplied URL points to the root page of an org or user account.
 func IsAccount(url *url.URL) bool {
 	if url.Host == "github.com" {
@@ -37,7 +32,7 @@ func IsAccount(url *url.URL) bool {
 			return true
 		}
 	}
-	if url.Host == "gitlab.com" {
+	if IsGitLab(url) {
 		if ok, _ := regexp.MatchString("^/[^/]+/?$", url.Path); ok {
 			return true
 		}
@@ -57,7 +52,7 @@ func IsRepo(url *url.URL) bool {
 			return true
 		}
 	}
-	if url.Host == "gitlab.com" {
+	if IsGitLab(url) {
 		if ok, _ := regexp.MatchString("^(/[^/]+){2,}/?$", url.Path); ok {
 			if ok, _ := regexp.MatchString("/(blob|raw)/", url.Path); !ok {
 				return true
@@ -82,7 +77,7 @@ func IsFile(url *url.URL) bool {
 			return true
 		}
 	}
-	if url.Host == "gitlab.com" {
+	if IsGitLab(url) {
 		if ok, _ := regexp.MatchString("^(/[^/]+)+/blob/[^/]+/.+$", url.Path); ok {
 			return true
 		}
@@ -102,7 +97,7 @@ func IsRawFile(url *url.URL) bool {
 			return true
 		}
 	}
-	if url.Host == "gitlab.com" {
+	if IsGitLab(url) {
 		if ok, _ := regexp.MatchString("^(/[^/]+)+/raw/[^/]+/.+$", url.Path); ok {
 			return true
 		}
@@ -113,7 +108,7 @@ func IsRawFile(url *url.URL) bool {
 // GetRawFile returns the raw URL corresponding to the supplied file URL.
 // In case the supplied file URL is already raw, it will be returned back.
 func GetRawFile(url *url.URL) *url.URL {
-	if IsRaw(url) {
+	if IsRawFile(url) {
 		return url
 	}
 	if url.Host == "github.com" {
@@ -126,8 +121,8 @@ func GetRawFile(url *url.URL) *url.URL {
 		url, _ := url.Parse(re.ReplaceAllString(url.String(), "https://bitbucket.org/$1/$2/raw/$3"))
 		return url
 	}
-	if url.Host == "gitlab.com" {
-		re := regexp.MustCompile("^(https://gitlab.com(?:/[^/]+)+)/blob/([^/]+/.+)$")
+	if IsGitLab(url) {
+		re := regexp.MustCompile("^(https://.+?(?:/[^/]+)+)/blob/([^/]+/.+)$")
 		url, _ := url.Parse(re.ReplaceAllString(url.String(), "$1/raw/$2"))
 		return url
 	}
@@ -148,8 +143,8 @@ func GetRawRoot(url *url.URL) *url.URL {
 			url, _ := url.Parse(re.ReplaceAllString(url.String(), "$1/"))
 			return url
 		}
-		if url.Host == "gitlab.com" {
-			re := regexp.MustCompile("^(https://gitlab.com(?:/[^/]+)+/raw/[^/]+).*$")
+		if IsGitLab(url) {
+			re := regexp.MustCompile("^(https://.+?(?:/[^/]+)+/raw/[^/]+).*$")
 			url, _ := url.Parse(re.ReplaceAllString(url.String(), "$1/"))
 			return url
 		}
