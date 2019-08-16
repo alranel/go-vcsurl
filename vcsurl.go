@@ -62,11 +62,8 @@ func IsRepo(url *url.URL) bool {
 	return false
 }
 
-// IsFile returns true if the supplied URL points to a file, either in raw or non-raw mode.
+// IsFile returns true if the supplied URL points to a file in non-raw mode.
 func IsFile(url *url.URL) bool {
-	if IsRawFile(url) {
-		return true
-	}
 	if url.Host == "github.com" {
 		if ok, _ := regexp.MatchString("^/[^/]+/[^/]+/blob/[^/]+/.+$", url.Path); ok {
 			return true
@@ -131,7 +128,7 @@ func GetRawFile(url *url.URL) *url.URL {
 
 // GetRawRoot returns the URL of the raw repository root containing the supplied file.
 func GetRawRoot(url *url.URL) *url.URL {
-	if IsFile(url) {
+	if IsFile(url) || IsRawFile(url) {
 		url = GetRawFile(url)
 		if url.Host == "raw.githubusercontent.com" {
 			re := regexp.MustCompile("^(https://raw.githubusercontent.com/[^/]+/[^/]+/[^/]+).*$")
