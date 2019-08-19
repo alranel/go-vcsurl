@@ -22,6 +22,9 @@ func TestGitHub(t *testing.T) {
 	AssertEqual(t, IsAccount(url), false)
 	AssertEqual(t, GetRepo(url).String(), url.String())
 
+	url, _ = url.Parse("https://github.com/alranel/go-vcsurl.git")
+	AssertEqual(t, GetRepo(url).String(), "https://github.com/alranel/go-vcsurl")
+
 	url, _ = url.Parse("https://github.com/alranel/go-vcsurl/blob/master/README.md")
 	AssertEqual(t, IsFile(url), true)
 	AssertEqual(t, IsRepo(url), false)
@@ -31,6 +34,9 @@ func TestGitHub(t *testing.T) {
 	AssertEqual(t, IsRawRoot(GetRawRoot(url)), true)
 	AssertEqual(t, GetRepo(url).String(), "https://github.com/alranel/go-vcsurl")
 	AssertEqual(t, GetRepo(GetRawRoot(url)).String(), "https://github.com/alranel/go-vcsurl")
+
+	url, _ = url.Parse("https://raw.githubusercontent.com/alranel/go-vcsurl/master") // no trailing slash
+	AssertEqual(t, GetRepo(url).String(), "https://github.com/alranel/go-vcsurl")
 }
 
 func TestBitBucket(t *testing.T) {

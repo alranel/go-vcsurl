@@ -150,15 +150,15 @@ func IsRawRoot(url *url.URL) bool {
 	if url.Host == "github.com" {
 		return false
 	} else if url.Host == "raw.githubusercontent.com" {
-		if ok, _ := regexp.MatchString("^/[^/]+/[^/]+/[^/]+/$", url.Path); ok {
+		if ok, _ := regexp.MatchString("^/[^/]+/[^/]+/[^/]+/?$", url.Path); ok {
 			return true
 		}
 	} else if url.Host == "bitbucket.org" {
-		if ok, _ := regexp.MatchString("^/[^/]+/[^/]+/raw/[^/]+/$", url.Path); ok {
+		if ok, _ := regexp.MatchString("^/[^/]+/[^/]+/raw/[^/]+/?$", url.Path); ok {
 			return true
 		}
 	} else if IsGitLab(url) {
-		if ok, _ := regexp.MatchString("^(/[^/]+)+/raw/[^/]+/$", url.Path); ok {
+		if ok, _ := regexp.MatchString("^(/[^/]+)+/raw/[^/]+/?$", url.Path); ok {
 			return true
 		}
 	}
