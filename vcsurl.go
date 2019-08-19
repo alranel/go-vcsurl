@@ -1,10 +1,13 @@
 package vcsurl
 
 import (
+	"net/http"
 	"net/url"
 	"regexp"
 	"strings"
 )
+
+var gitlabDomains = make(map[string]bool)
 
 // IsGitHub returns true if the supplied URL belongs to GitHub.
 func IsGitHub(url *url.URL) bool {
@@ -18,7 +21,30 @@ func IsBitBucket(url *url.URL) bool {
 
 // IsGitLab returns true if the supplied URL belongs to BitBucket.
 func IsGitLab(url *url.URL) bool {
-	return url.Host == "gitlab.com"
+	if url.Host == "gitlab.com" {
+		return true
+	}
+
+	// Did we already validate this URL as a GitLab site?
+	if _, seen := gitlabDomains[url.Host]; seen {
+		return true
+	}
+
+	// Detect GitLab running on custom domains by performing a HTTP request and looking
+	// for the _gitlab_session cookie.
+	url2, _ := url.Parse(url.String())
+	url2.Path = "/api"
+	resp, err := http.Get(url2.String())
+	if err == nil {
+		for _, cookie := range resp.Cookies() {
+			if cookie.Name == "_gitlab_session" {
+				gitlabDomains[url.Host] = true
+				return true
+			}
+		}
+	}
+
+	return false
 }
 
 // IsAccount returns true if the supplied URL points to the root page of an org or user account.
@@ -27,13 +53,11 @@ func IsAccount(url *url.URL) bool {
 		if ok, _ := regexp.MatchString("^/[^/]+$", url.Path); ok {
 			return true
 		}
-	}
-	if url.Host == "bitbucket.org" {
+	} else if url.Host == "bitbucket.org" {
 		if ok, _ := regexp.MatchString("^/[^/]+/?$", url.Path); ok {
 			return true
 		}
-	}
-	if IsGitLab(url) {
+	} else if IsGitLab(url) {
 		if ok, _ := regexp.MatchString("^/[^/]+/?$", url.Path); ok {
 			return true
 		}
@@ -47,13 +71,11 @@ func IsRepo(url *url.URL) bool {
 		if ok, _ := regexp.MatchString("^/[^/]+/[^/]+$", url.Path); ok {
 			return true
 		}
-	}
-	if url.Host == "bitbucket.org" {
+	} else if url.Host == "bitbucket.org" {
 		if ok, _ := regexp.MatchString("^/[^/]+/[^/]+$", url.Path); ok {
 			return true
 		}
-	}
-	if IsGitLab(url) {
+	} else if IsGitLab(url) {
 		if ok, _ := regexp.MatchString("^(/[^/]+){2,}/?$", url.Path); ok {
 			if ok, _ := regexp.MatchString("/(blob|raw)/", url.Path); !ok {
 				return true
@@ -69,13 +91,11 @@ func IsFile(url *url.URL) bool {
 		if ok, _ := regexp.MatchString("^/[^/]+/[^/]+/blob/[^/]+/.+$", url.Path); ok {
 			return true
 		}
-	}
-	if url.Host == "bitbucket.org" {
+	} else if url.Host == "bitbucket.org" {
 		if ok, _ := regexp.MatchString("^/[^/]+/[^/]+/src/[^/]+/.+$", url.Path); ok {
 			return true
 		}
-	}
-	if IsGitLab(url) {
+	} else if IsGitLab(url) {
 		if ok, _ := regexp.MatchString("^(/[^/]+)+/blob/[^/]+/.+$", url.Path); ok {
 			return true
 		}
@@ -85,17 +105,17 @@ func IsFile(url *url.URL) bool {
 
 // IsRawFile returns true if the supplied URL points to a raw file.
 func IsRawFile(url *url.URL) bool {
-	if url.Host == "raw.githubusercontent.com" {
+	if url.Host == "github.com" {
+		return false
+	} else if url.Host == "raw.githubusercontent.com" {
 		if ok, _ := regexp.MatchString("^/[^/]+/[^/]+/[^/]+/.+$", url.Path); ok {
 			return true
 		}
-	}
-	if url.Host == "bitbucket.org" {
+	} else if url.Host == "bitbucket.org" {
 		if ok, _ := regexp.MatchString("^/[^/]+/[^/]+/raw/[^/]+/.+$", url.Path); ok {
 			return true
 		}
-	}
-	if IsGitLab(url) {
+	} else if IsGitLab(url) {
 		if ok, _ := regexp.MatchString("^(/[^/]+)+/raw/[^/]+/.+$", url.Path); ok {
 			return true
 		}
@@ -113,13 +133,11 @@ func GetRawFile(url *url.URL) *url.URL {
 		re := regexp.MustCompile("^https://github.com/([^/]+)/([^/]+)/blob/(.+)$")
 		url, _ := url.Parse(re.ReplaceAllString(url.String(), "https://raw.githubusercontent.com/$1/$2/$3"))
 		return url
-	}
-	if url.Host == "bitbucket.org" {
+	} else if url.Host == "bitbucket.org" {
 		re := regexp.MustCompile("^https://bitbucket.org/([^/]+)/([^/]+)/src/(.+)$")
 		url, _ := url.Parse(re.ReplaceAllString(url.String(), "https://bitbucket.org/$1/$2/raw/$3"))
 		return url
-	}
-	if IsGitLab(url) {
+	} else if IsGitLab(url) {
 		re := regexp.MustCompile("^(https://.+?(?:/[^/]+)+)/blob/([^/]+/.+)$")
 		url, _ := url.Parse(re.ReplaceAllString(url.String(), "$1/raw/$2"))
 		return url
@@ -129,17 +147,17 @@ func GetRawFile(url *url.URL) *url.URL {
 
 // IsRawRoot returns true if the supplied URL is the root for raw files.
 func IsRawRoot(url *url.URL) bool {
-	if url.Host == "raw.githubusercontent.com" {
+	if url.Host == "github.com" {
+		return false
+	} else if url.Host == "raw.githubusercontent.com" {
 		if ok, _ := regexp.MatchString("^/[^/]+/[^/]+/[^/]+/$", url.Path); ok {
 			return true
 		}
-	}
-	if url.Host == "bitbucket.org" {
+	} else if url.Host == "bitbucket.org" {
 		if ok, _ := regexp.MatchString("^/[^/]+/[^/]+/raw/[^/]+/$", url.Path); ok {
 			return true
 		}
-	}
-	if IsGitLab(url) {
+	} else if IsGitLab(url) {
 		if ok, _ := regexp.MatchString("^(/[^/]+)+/raw/[^/]+/$", url.Path); ok {
 			return true
 		}
@@ -155,13 +173,11 @@ func GetRawRoot(url *url.URL) *url.URL {
 			re := regexp.MustCompile("^(https://raw.githubusercontent.com/[^/]+/[^/]+/[^/]+).*$")
 			url, _ := url.Parse(re.ReplaceAllString(url.String(), "$1/"))
 			return url
-		}
-		if url.Host == "bitbucket.org" {
+		} else if url.Host == "bitbucket.org" {
 			re := regexp.MustCompile("^(https://bitbucket.org/[^/]+/[^/]+/raw/[^/]+).*$")
 			url, _ := url.Parse(re.ReplaceAllString(url.String(), "$1/"))
 			return url
-		}
-		if IsGitLab(url) {
+		} else if IsGitLab(url) {
 			re := regexp.MustCompile("^(https://.+?(?:/[^/]+)+/raw/[^/]+).*$")
 			url, _ := url.Parse(re.ReplaceAllString(url.String(), "$1/"))
 			return url
@@ -184,13 +200,11 @@ func GetRepo(url *url.URL) *url.URL {
 			re := regexp.MustCompile("^https://raw.githubusercontent.com/([^/]+/[^/]+).*$")
 			url, _ := url.Parse(re.ReplaceAllString(url.String(), "https://github.com/$1"))
 			return url
-		}
-		if url.Host == "bitbucket.org" {
+		} else if url.Host == "bitbucket.org" {
 			re := regexp.MustCompile("^(https://bitbucket.org/[^/]+/[^/]+).*$")
 			url, _ := url.Parse(re.ReplaceAllString(url.String(), "$1"))
 			return url
-		}
-		if IsGitLab(url) {
+		} else if IsGitLab(url) {
 			re := regexp.MustCompile("^(https://.+?(?:/[^/]+)+?)/raw/.*$")
 			url, _ := url.Parse(re.ReplaceAllString(url.String(), "$1"))
 			return url

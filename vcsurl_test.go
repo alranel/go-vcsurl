@@ -83,6 +83,9 @@ func TestGitLab(t *testing.T) {
 	AssertEqual(t, IsRawRoot(GetRawRoot(url)), true)
 	AssertEqual(t, GetRepo(url).String(), "https://gitlab.com/gitlab-org/gitlab-services/design.gitlab.com")
 	AssertEqual(t, GetRepo(GetRawRoot(url)).String(), "https://gitlab.com/gitlab-org/gitlab-services/design.gitlab.com")
+
+	url, _ = url.Parse("https://dev.funkwhale.audio/funkwhale/ansible")
+	AssertEqual(t, IsGitLab(url), true)
 }
 
 // AssertEqual checks if values are equal
