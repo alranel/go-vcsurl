@@ -3,6 +3,7 @@ package vcsurl
 import (
 	"net/url"
 	"regexp"
+	"strings"
 )
 
 // IsGitHub returns true if the supplied URL belongs to GitHub.
@@ -126,6 +127,26 @@ func GetRawFile(url *url.URL) *url.URL {
 	return nil
 }
 
+// IsRawRoot returns true if the supplied URL is the root for raw files.
+func IsRawRoot(url *url.URL) bool {
+	if url.Host == "raw.githubusercontent.com" {
+		if ok, _ := regexp.MatchString("^/[^/]+/[^/]+/[^/]+/$", url.Path); ok {
+			return true
+		}
+	}
+	if url.Host == "bitbucket.org" {
+		if ok, _ := regexp.MatchString("^/[^/]+/[^/]+/raw/[^/]+/$", url.Path); ok {
+			return true
+		}
+	}
+	if IsGitLab(url) {
+		if ok, _ := regexp.MatchString("^(/[^/]+)+/raw/[^/]+/$", url.Path); ok {
+			return true
+		}
+	}
+	return false
+}
+
 // GetRawRoot returns the URL of the raw repository root containing the supplied file.
 func GetRawRoot(url *url.URL) *url.URL {
 	if IsFile(url) || IsRawFile(url) {
@@ -143,6 +164,35 @@ func GetRawRoot(url *url.URL) *url.URL {
 		if IsGitLab(url) {
 			re := regexp.MustCompile("^(https://.+?(?:/[^/]+)+/raw/[^/]+).*$")
 			url, _ := url.Parse(re.ReplaceAllString(url.String(), "$1/"))
+			return url
+		}
+	}
+	return nil
+}
+
+// GetRepo returns the URL of the main page of the repository (i.e. not raw nor git)
+func GetRepo(url *url.URL) *url.URL {
+	if IsRepo(url) {
+		url.Path = strings.TrimSuffix(url.Path, ".git")
+		return url
+	}
+	if IsFile(url) || IsRawFile(url) || IsRawRoot(url) {
+		if IsFile(url) {
+			url = GetRawFile(url)
+		}
+		if url.Host == "raw.githubusercontent.com" {
+			re := regexp.MustCompile("^https://raw.githubusercontent.com/([^/]+/[^/]+).*$")
+			url, _ := url.Parse(re.ReplaceAllString(url.String(), "https://github.com/$1"))
+			return url
+		}
+		if url.Host == "bitbucket.org" {
+			re := regexp.MustCompile("^(https://bitbucket.org/[^/]+/[^/]+).*$")
+			url, _ := url.Parse(re.ReplaceAllString(url.String(), "$1"))
+			return url
+		}
+		if IsGitLab(url) {
+			re := regexp.MustCompile("^(https://.+?(?:/[^/]+)+?)/raw/.*$")
+			url, _ := url.Parse(re.ReplaceAllString(url.String(), "$1"))
 			return url
 		}
 	}
