@@ -21,9 +21,11 @@ func TestGitHub(t *testing.T) {
 	AssertEqual(t, IsRepo(url), true)
 	AssertEqual(t, IsAccount(url), false)
 	AssertEqual(t, GetRepo(url).String(), url.String())
+	AssertEqual(t, GetRawRoot(url).String(), "https://raw.githubusercontent.com/alranel/go-vcsurl/master/")
 
 	url, _ = url.Parse("https://github.com/alranel/go-vcsurl.git")
 	AssertEqual(t, GetRepo(url).String(), "https://github.com/alranel/go-vcsurl")
+	AssertEqual(t, GetRawRoot(url).String(), "https://raw.githubusercontent.com/alranel/go-vcsurl/master/")
 
 	url, _ = url.Parse("https://github.com/alranel/go-vcsurl/blob/master/README.md")
 	AssertEqual(t, IsFile(url), true)

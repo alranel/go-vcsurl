@@ -182,6 +182,15 @@ func GetRawRoot(url *url.URL) *url.URL {
 			url, _ := url.Parse(re.ReplaceAllString(url.String(), "$1/"))
 			return url
 		}
+	} else {
+		if url.Host == "github.com" {
+			//strip .git if present
+			url.Path = strings.TrimSuffix(url.Path, ".git")
+
+			re := regexp.MustCompile("^https://github.com/([^/]+)/([^/]+)$")
+			url, _ := url.Parse(re.ReplaceAllString(url.String(), "https://raw.githubusercontent.com/$1/$2/master/"))
+			return url
+		}
 	}
 	return nil
 }
