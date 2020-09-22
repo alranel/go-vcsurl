@@ -3,6 +3,7 @@ package vcsurl
 import (
 	"net/http"
 	"net/url"
+	"path"
 	"regexp"
 	"strings"
 )
@@ -47,6 +48,23 @@ func IsGitLab(url *url.URL) bool {
 	return false
 }
 
+// IsHttpRepo returns true if the supplied URL points to an HTTP git repository.
+func IsHttpRepo(url *url.URL) bool {
+	refsUrl, _ := url.Parse(url.String())
+	refsUrl.Path = path.Join(refsUrl.Path, "/info/refs")
+
+	query := url.Query()
+	query.Set("service", "git-upload-pack")
+	refsUrl.RawQuery = query.Encode()
+
+	resp, err := http.Head(refsUrl.String())
+	if err == nil {
+		return resp.StatusCode >= 200 && resp.StatusCode <= 299
+	}
+
+	return false
+}
+
 // IsAccount returns true if the supplied URL points to the root page of an org or user account.
 func IsAccount(url *url.URL) bool {
 	if url.Host == "github.com" {
@@ -81,6 +99,8 @@ func IsRepo(url *url.URL) bool {
 				return true
 			}
 		}
+	} else if IsHttpRepo(url) {
+		return true
 	}
 	return false
 }

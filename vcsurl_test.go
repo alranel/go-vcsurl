@@ -7,6 +7,14 @@ import (
 	"testing"
 )
 
+func TestHttpRepo(t *testing.T) {
+	url, _ := url.Parse("https://git.libreoffice.org/core")
+	AssertEqual(t, IsGitHub(url), false)
+	AssertEqual(t, IsRawFile(url), false)
+	AssertEqual(t, IsRepo(url), true)
+	AssertEqual(t, IsAccount(url), false)
+}
+
 func TestGitHub(t *testing.T) {
 	url, _ := url.Parse("https://github.com/alranel")
 	AssertEqual(t, IsGitHub(url), true)
