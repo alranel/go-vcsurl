@@ -100,8 +100,41 @@ func TestGitLab(t *testing.T) {
 	AssertEqual(t, GetRepo(url).String(), "https://gitlab.com/gitlab-org/gitlab-services/design.gitlab.com")
 	AssertEqual(t, GetRepo(GetRawRoot(url)).String(), "https://gitlab.com/gitlab-org/gitlab-services/design.gitlab.com")
 
+	// Self hosted GitLab
 	url, _ = url.Parse("https://dev.funkwhale.audio/funkwhale/ansible")
 	AssertEqual(t, IsGitLab(url), true)
+
+	// Self hosted GitLab with HTTP URL and paths namespaced with '-'.
+	url, _ = url.Parse("http://dev.funkwhale.audio/funkwhale/ansible/-/blob/master/README.md")
+	AssertEqual(t, IsGitLab(url), true)
+	AssertEqual(t, IsRepo(url), false)
+	AssertEqual(t, IsRawFile(url), false)
+	AssertEqual(t, GetRawFile(url).String(), "http://dev.funkwhale.audio/funkwhale/ansible/raw/master/README.md")
+	AssertEqual(t, GetRawRoot(url).String(), "http://dev.funkwhale.audio/funkwhale/ansible/raw/master/")
+	AssertEqual(t, IsRawRoot(GetRawRoot(url)), true)
+	AssertEqual(t, GetRepo(url).String(), "http://dev.funkwhale.audio/funkwhale/ansible")
+	AssertEqual(t, GetRepo(GetRawRoot(url)).String(), "http://dev.funkwhale.audio/funkwhale/ansible")
+
+	// New style raw paths
+	url, _ = url.Parse("https://gitlab.com/gitlab-org/gitlab/-/raw/master/README.md")
+	AssertEqual(t, IsRawFile(url), true)
+	url, _ = url.Parse("https://gitlab.com/gitlab-org/gitlab/-/raw/master/")
+	AssertEqual(t, IsRawRoot(url), true)
+	url, _ = url.Parse("https://gitlab.com/gitlab-org/gitlab/")
+	AssertEqual(t, IsRawRoot(url), false)
+
+	// Old style raw paths
+	url, _ = url.Parse("https://riuso.comune.salerno.it/root/simel_2/raw/master/publiccode.yml")
+	AssertEqual(t, IsRawFile(url), true)
+	url, _ = url.Parse("https://riuso.comune.salerno.it/root/simel_2/raw/master/")
+	AssertEqual(t, IsRawRoot(url), true)
+	url, _ = url.Parse("https://riuso.comune.salerno.it/")
+	AssertEqual(t, IsRawRoot(url), false)
+
+	url, _ = url.Parse("https://riuso.comune.salerno.it/root/simel_2/blob/master/publiccode.yml")
+	AssertEqual(t, IsFile(url), true)
+	AssertEqual(t, IsRepo(url), false)
+	AssertEqual(t, IsRawFile(url), false)
 }
 
 // AssertEqual checks if values are equal

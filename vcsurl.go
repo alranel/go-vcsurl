@@ -116,7 +116,7 @@ func IsFile(url *url.URL) bool {
 			return true
 		}
 	} else if IsGitLab(url) {
-		if ok, _ := regexp.MatchString("^(/[^/]+)+/blob/[^/]+/.+$", url.Path); ok {
+		if ok, _ := regexp.MatchString("^(/[^/]+)+/(-/)?blob/[^/]+/.+$", url.Path); ok {
 			return true
 		}
 	}
@@ -136,7 +136,7 @@ func IsRawFile(url *url.URL) bool {
 			return true
 		}
 	} else if IsGitLab(url) {
-		if ok, _ := regexp.MatchString("^(/[^/]+)+/raw/[^/]+/.+$", url.Path); ok {
+		if ok, _ := regexp.MatchString("^(/[^/]+)+/(-/)?raw/[^/]+/.+$", url.Path); ok {
 			return true
 		}
 	}
@@ -158,7 +158,7 @@ func GetRawFile(url *url.URL) *url.URL {
 		url, _ := url.Parse(re.ReplaceAllString(url.String(), "https://bitbucket.org/$1/$2/raw/$3"))
 		return url
 	} else if IsGitLab(url) {
-		re := regexp.MustCompile("^(https://.+?(?:/[^/]+)+)/blob/([^/]+/.+)$")
+		re := regexp.MustCompile("^(https?://.+?(?:/[^/]+)+?)/(?:-/)?blob/([^/]+/.+)$")
 		url, _ := url.Parse(re.ReplaceAllString(url.String(), "$1/raw/$2"))
 		return url
 	}
@@ -178,7 +178,7 @@ func IsRawRoot(url *url.URL) bool {
 			return true
 		}
 	} else if IsGitLab(url) {
-		if ok, _ := regexp.MatchString("^(/[^/]+)+/raw/[^/]+/?$", url.Path); ok {
+		if ok, _ := regexp.MatchString("^(/[^/]+)+/(-/)?raw/[^/]+/?$", url.Path); ok {
 			return true
 		}
 	}
@@ -198,7 +198,7 @@ func GetRawRoot(url *url.URL) *url.URL {
 			url, _ := url.Parse(re.ReplaceAllString(url.String(), "$1/"))
 			return url
 		} else if IsGitLab(url) {
-			re := regexp.MustCompile("^(https://.+?(?:/[^/]+)+/raw/[^/]+).*$")
+			re := regexp.MustCompile("^(https?://.+?(?:/[^/]+)+/(-/)?raw/[^/]+).*$")
 			url, _ := url.Parse(re.ReplaceAllString(url.String(), "$1/"))
 			return url
 		}
@@ -234,7 +234,7 @@ func GetRepo(url *url.URL) *url.URL {
 			url, _ := url.Parse(re.ReplaceAllString(url.String(), "$1"))
 			return url
 		} else if IsGitLab(url) {
-			re := regexp.MustCompile("^(https://.+?(?:/[^/]+)+?)/raw/.*$")
+			re := regexp.MustCompile("^(https?://.+?(?:/[^/]+)+?)/(-/)?raw/.*$")
 			url, _ := url.Parse(re.ReplaceAllString(url.String(), "$1"))
 			return url
 		}
