@@ -1,6 +1,8 @@
 package vcsurl
 
 import (
+	"fmt"
+	"io/ioutil"
 	"net/http"
 	"net/url"
 	"path"
@@ -48,16 +50,42 @@ func IsGitLab(url *url.URL) bool {
 	return false
 }
 
-// IsHttpRepo returns true if the supplied URL points to an HTTP git repository.
-func IsHttpRepo(url *url.URL) bool {
-	refsUrl, _ := url.Parse(url.String())
-	refsUrl.Path = path.Join(refsUrl.Path, "/info/refs")
+func gitRefs(url url.URL) url.URL {
+	url.Path = path.Join(url.Path, "/info/refs")
 
 	query := url.Query()
 	query.Set("service", "git-upload-pack")
-	refsUrl.RawQuery = query.Encode()
+	url.RawQuery = query.Encode()
 
-	resp, err := http.Head(refsUrl.String())
+	return url
+}
+
+func gitDefaultBranch(url url.URL) (string, error) {
+	refs := gitRefs(url)
+
+	resp, err := http.Get(refs.String())
+	if err != nil {
+		return "", err
+	}
+
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+
+	re := regexp.MustCompile(`(?m)^[0-9a-fA-F]+ HEAD.+symref=HEAD:refs\/heads\/(.+?) .*\n`)
+	matches := re.FindStringSubmatch(string(body))
+	if len(matches) == 2 {
+		return matches[1], nil
+	}
+
+	// If we can't detect the default branch, let's default to master
+	return "master", nil
+}
+
+// IsHttpRepo returns true if the supplied URL points to an HTTP git repository.
+func IsHttpRepo(url *url.URL) bool {
+	refs := gitRefs(*url)
+
+	resp, err := http.Head(refs.String())
 	if err == nil {
 		return resp.StatusCode >= 200 && resp.StatusCode <= 299
 	}
@@ -186,33 +214,54 @@ func IsRawRoot(url *url.URL) bool {
 }
 
 // GetRawRoot returns the URL of the raw repository root containing the supplied file.
-func GetRawRoot(url *url.URL) *url.URL {
+// Optionally you can pass a branch to hint which branch to use, if it can't be autodetected.
+func GetRawRoot(url *url.URL, branch ...string) (*url.URL, error) {
 	if IsFile(url) || IsRawFile(url) {
 		url = GetRawFile(url)
 		if url.Host == "raw.githubusercontent.com" {
 			re := regexp.MustCompile("^(https://raw.githubusercontent.com/[^/]+/[^/]+/[^/]+).*$")
 			url, _ := url.Parse(re.ReplaceAllString(url.String(), "$1/"))
-			return url
+			return url, nil
 		} else if url.Host == "bitbucket.org" {
 			re := regexp.MustCompile("^(https://bitbucket.org/[^/]+/[^/]+/raw/[^/]+).*$")
 			url, _ := url.Parse(re.ReplaceAllString(url.String(), "$1/"))
-			return url
+			return url, nil
 		} else if IsGitLab(url) {
 			re := regexp.MustCompile("^(https?://.+?(?:/[^/]+)+/(-/)?raw/[^/]+).*$")
 			url, _ := url.Parse(re.ReplaceAllString(url.String(), "$1/"))
-			return url
+			return url, nil
 		}
 	} else {
+		var defaultBranch string
+		var err error
+		if (len(branch) > 0 && branch[0] != "") {
+			defaultBranch = branch[0]
+		} else {
+			defaultBranch, err = gitDefaultBranch(*url)
+			if err != nil {
+				return nil, fmt.Errorf("Can't get default branch: %s", err)
+			}
+		}
+
 		if url.Host == "github.com" {
-			//strip .git if present
-			url.Path = strings.TrimSuffix(url.Path, ".git")
+			root := fmt.Sprintf("https://raw.githubusercontent.com/$1/$2/%s/", defaultBranch)
 
 			re := regexp.MustCompile("^https://github.com/([^/]+)/([^/]+)$")
-			url, _ := url.Parse(re.ReplaceAllString(url.String(), "https://raw.githubusercontent.com/$1/$2/master/"))
-			return url
+			url, _ := url.Parse(re.ReplaceAllString(url.String(), root))
+
+			return url, nil
+		} else if url.Host == "bitbucket.org" {
+			url, _ := url.Parse(fmt.Sprintf("%s/raw/%s/", url.String(), defaultBranch))
+
+			return url, nil
+		} else if IsGitLab(url) {
+			url, _ := url.Parse(fmt.Sprintf("%s/-/raw/%s/", url.String(), defaultBranch))
+
+			return url, nil
 		}
 	}
-	return nil
+
+	return nil, fmt.Errorf("Can't get raw root for URL `%s': unknown VCS", url.String())
 }
 
 // GetRepo returns the URL of the main page of the repository (i.e. not raw nor git)
