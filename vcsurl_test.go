@@ -29,24 +29,42 @@ func TestGitHub(t *testing.T) {
 	AssertEqual(t, IsRepo(url), true)
 	AssertEqual(t, IsAccount(url), false)
 	AssertEqual(t, GetRepo(url).String(), url.String())
-	AssertEqual(t, GetRawRoot(url).String(), "https://raw.githubusercontent.com/alranel/go-vcsurl/master/")
+
+	rawRoot, err := GetRawRoot(url)
+	AssertEqual(t, err, nil)
+	AssertEqual(t, rawRoot.String(), "https://raw.githubusercontent.com/alranel/go-vcsurl/master/")
 
 	url, _ = url.Parse("https://github.com/alranel/go-vcsurl.git")
 	AssertEqual(t, GetRepo(url).String(), "https://github.com/alranel/go-vcsurl")
-	AssertEqual(t, GetRawRoot(url).String(), "https://raw.githubusercontent.com/alranel/go-vcsurl/master/")
+	rawRoot, err = GetRawRoot(url)
+	AssertEqual(t, err, nil)
+	AssertEqual(t, rawRoot.String(), "https://raw.githubusercontent.com/alranel/go-vcsurl/master/")
 
 	url, _ = url.Parse("https://github.com/alranel/go-vcsurl/blob/master/README.md")
 	AssertEqual(t, IsFile(url), true)
 	AssertEqual(t, IsRepo(url), false)
 	AssertEqual(t, IsRawFile(url), false)
 	AssertEqual(t, GetRawFile(url).String(), "https://raw.githubusercontent.com/alranel/go-vcsurl/master/README.md")
-	AssertEqual(t, GetRawRoot(url).String(), "https://raw.githubusercontent.com/alranel/go-vcsurl/master/")
-	AssertEqual(t, IsRawRoot(GetRawRoot(url)), true)
+	rawRoot, err = GetRawRoot(url)
+	AssertEqual(t, err, nil)
+	AssertEqual(t, rawRoot.String(), "https://raw.githubusercontent.com/alranel/go-vcsurl/master/")
+	AssertEqual(t, IsRawRoot(rawRoot), true)
 	AssertEqual(t, GetRepo(url).String(), "https://github.com/alranel/go-vcsurl")
-	AssertEqual(t, GetRepo(GetRawRoot(url)).String(), "https://github.com/alranel/go-vcsurl")
+	AssertEqual(t, GetRepo(rawRoot).String(), "https://github.com/alranel/go-vcsurl")
 
 	url, _ = url.Parse("https://raw.githubusercontent.com/alranel/go-vcsurl/master") // no trailing slash
 	AssertEqual(t, GetRepo(url).String(), "https://github.com/alranel/go-vcsurl")
+
+	// Repository with default branch != master
+	url, _ = url.Parse("https://github.com/italia/cloud.italia.it-site")
+	rawRoot, err = GetRawRoot(url)
+	AssertEqual(t, err, nil)
+	AssertEqual(t, rawRoot.String(), "https://raw.githubusercontent.com/italia/cloud.italia.it-site/main/")
+
+	// GetRawRoot with branch hint
+	rawRoot, err = GetRawRoot(url, "my-default-branch")
+	AssertEqual(t, err, nil)
+	AssertEqual(t, rawRoot.String(), "https://raw.githubusercontent.com/italia/cloud.italia.it-site/my-default-branch/")
 }
 
 func TestBitBucket(t *testing.T) {
@@ -63,16 +81,21 @@ func TestBitBucket(t *testing.T) {
 	AssertEqual(t, IsRepo(url), true)
 	AssertEqual(t, IsAccount(url), false)
 	AssertEqual(t, GetRepo(url).String(), url.String())
+	rawRoot, err := GetRawRoot(url)
+	AssertEqual(t, err, nil)
+	AssertEqual(t, rawRoot.String(), "https://bitbucket.org/Comune_Venezia/whistleblowing/raw/master/")
 
 	url, _ = url.Parse("https://bitbucket.org/Comune_Venezia/whistleblowing/src/master/LICENSE")
 	AssertEqual(t, IsFile(url), true)
 	AssertEqual(t, IsRepo(url), false)
 	AssertEqual(t, IsRawFile(url), false)
 	AssertEqual(t, GetRawFile(url).String(), "https://bitbucket.org/Comune_Venezia/whistleblowing/raw/master/LICENSE")
-	AssertEqual(t, GetRawRoot(url).String(), "https://bitbucket.org/Comune_Venezia/whistleblowing/raw/master/")
-	AssertEqual(t, IsRawRoot(GetRawRoot(url)), true)
+	rawRoot, err = GetRawRoot(url)
+	AssertEqual(t, err, nil)
+	AssertEqual(t, rawRoot.String(), "https://bitbucket.org/Comune_Venezia/whistleblowing/raw/master/")
+	AssertEqual(t, IsRawRoot(rawRoot), true)
 	AssertEqual(t, GetRepo(url).String(), "https://bitbucket.org/Comune_Venezia/whistleblowing")
-	AssertEqual(t, GetRepo(GetRawRoot(url)).String(), "https://bitbucket.org/Comune_Venezia/whistleblowing")
+	AssertEqual(t, GetRepo(rawRoot).String(), "https://bitbucket.org/Comune_Venezia/whistleblowing")
 }
 
 func TestGitLab(t *testing.T) {
@@ -89,16 +112,21 @@ func TestGitLab(t *testing.T) {
 	AssertEqual(t, IsRepo(url), true)
 	AssertEqual(t, IsAccount(url), false)
 	AssertEqual(t, GetRepo(url).String(), url.String())
+	rawRoot, err := GetRawRoot(url)
+	AssertEqual(t, err, nil)
+	AssertEqual(t, rawRoot.String(), "https://gitlab.com/gitlab-org/gitlab-services/design.gitlab.com/-/raw/main/")
 
 	url, _ = url.Parse("https://gitlab.com/gitlab-org/gitlab-services/design.gitlab.com/blob/master/LICENSE")
 	AssertEqual(t, IsFile(url), true)
 	AssertEqual(t, IsRepo(url), false)
 	AssertEqual(t, IsRawFile(url), false)
 	AssertEqual(t, GetRawFile(url).String(), "https://gitlab.com/gitlab-org/gitlab-services/design.gitlab.com/raw/master/LICENSE")
-	AssertEqual(t, GetRawRoot(url).String(), "https://gitlab.com/gitlab-org/gitlab-services/design.gitlab.com/raw/master/")
-	AssertEqual(t, IsRawRoot(GetRawRoot(url)), true)
+	rawRoot, err = GetRawRoot(url)
+	AssertEqual(t, err, nil)
+	AssertEqual(t, rawRoot.String(), "https://gitlab.com/gitlab-org/gitlab-services/design.gitlab.com/raw/master/")
+	AssertEqual(t, IsRawRoot(rawRoot), true)
 	AssertEqual(t, GetRepo(url).String(), "https://gitlab.com/gitlab-org/gitlab-services/design.gitlab.com")
-	AssertEqual(t, GetRepo(GetRawRoot(url)).String(), "https://gitlab.com/gitlab-org/gitlab-services/design.gitlab.com")
+	AssertEqual(t, GetRepo(rawRoot).String(), "https://gitlab.com/gitlab-org/gitlab-services/design.gitlab.com")
 
 	// Self hosted GitLab
 	url, _ = url.Parse("https://dev.funkwhale.audio/funkwhale/ansible")
@@ -110,10 +138,12 @@ func TestGitLab(t *testing.T) {
 	AssertEqual(t, IsRepo(url), false)
 	AssertEqual(t, IsRawFile(url), false)
 	AssertEqual(t, GetRawFile(url).String(), "http://dev.funkwhale.audio/funkwhale/ansible/raw/master/README.md")
-	AssertEqual(t, GetRawRoot(url).String(), "http://dev.funkwhale.audio/funkwhale/ansible/raw/master/")
-	AssertEqual(t, IsRawRoot(GetRawRoot(url)), true)
+	rawRoot, err = GetRawRoot(url)
+	AssertEqual(t, err, nil)
+	AssertEqual(t, rawRoot.String(), "http://dev.funkwhale.audio/funkwhale/ansible/raw/master/")
+	AssertEqual(t, IsRawRoot(rawRoot), true)
 	AssertEqual(t, GetRepo(url).String(), "http://dev.funkwhale.audio/funkwhale/ansible")
-	AssertEqual(t, GetRepo(GetRawRoot(url)).String(), "http://dev.funkwhale.audio/funkwhale/ansible")
+	AssertEqual(t, GetRepo(rawRoot).String(), "http://dev.funkwhale.audio/funkwhale/ansible")
 
 	// New style raw paths
 	url, _ = url.Parse("https://gitlab.com/gitlab-org/gitlab/-/raw/master/README.md")
@@ -126,10 +156,17 @@ func TestGitLab(t *testing.T) {
 	// Old style raw paths
 	url, _ = url.Parse("https://riuso.comune.salerno.it/root/simel_2/raw/master/publiccode.yml")
 	AssertEqual(t, IsRawFile(url), true)
+	url, _ = url.Parse("http://gitlab.fuss.bz.it/fuss/fuss-metadata/raw/master/publiccode.yml")
+	AssertEqual(t, GetRepo(url).String(), "http://gitlab.fuss.bz.it/fuss/fuss-metadata")
 	url, _ = url.Parse("https://riuso.comune.salerno.it/root/simel_2/raw/master/")
 	AssertEqual(t, IsRawRoot(url), true)
 	url, _ = url.Parse("https://riuso.comune.salerno.it/")
 	AssertEqual(t, IsRawRoot(url), false)
+
+	url, _ = url.Parse("http://gitlab.fuss.bz.it/fuss/fuss-metadata/raw/master/")
+	AssertEqual(t, GetRepo(url).String(), "http://gitlab.fuss.bz.it/fuss/fuss-metadata")
+	url, _ = url.Parse("http://gitlab.fuss.bz.it/fuss/fuss-metadata")
+	AssertEqual(t, GetRepo(url).String(), "http://gitlab.fuss.bz.it/fuss/fuss-metadata")
 
 	url, _ = url.Parse("https://riuso.comune.salerno.it/root/simel_2/blob/master/publiccode.yml")
 	AssertEqual(t, IsFile(url), true)
