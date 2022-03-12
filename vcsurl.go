@@ -244,10 +244,13 @@ func GetRawRoot(url *url.URL, branch ...string) (*url.URL, error) {
 		}
 
 		if url.Host == "github.com" {
+			u := *url
+			u.Path = strings.TrimSuffix(u.Path, ".git")
+
 			root := fmt.Sprintf("https://raw.githubusercontent.com/$1/$2/%s/", defaultBranch)
 
 			re := regexp.MustCompile("^https://github.com/([^/]+)/([^/]+)$")
-			url, _ := url.Parse(re.ReplaceAllString(url.String(), root))
+			url, _ := url.Parse(re.ReplaceAllString(u.String(), root))
 
 			return url, nil
 		} else if url.Host == "bitbucket.org" {
@@ -267,8 +270,10 @@ func GetRawRoot(url *url.URL, branch ...string) (*url.URL, error) {
 // GetRepo returns the URL of the main page of the repository (i.e. not raw nor git)
 func GetRepo(url *url.URL) *url.URL {
 	if IsRepo(url) {
-		url.Path = strings.TrimSuffix(url.Path, ".git")
-		return url
+		u := *url
+		u.Path = strings.TrimSuffix(url.Path, ".git")
+
+		return &u
 	}
 	if IsFile(url) || IsRawFile(url) || IsRawRoot(url) {
 		if IsFile(url) {

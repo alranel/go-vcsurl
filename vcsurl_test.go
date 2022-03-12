@@ -36,6 +36,12 @@ func TestGitHub(t *testing.T) {
 
 	url, _ = url.Parse("https://github.com/alranel/go-vcsurl.git")
 	AssertEqual(t, GetRepo(url).String(), "https://github.com/alranel/go-vcsurl")
+
+	// Allocate a new URL with the same address to make sure GetRawRoot() doesn't rely
+	// on previous functions changing the URL and removing the ".git" suffix.
+	//
+	// See https://github.com/alranel/go-vcsurl/pull/11
+	url, _ = url.Parse("https://github.com/alranel/go-vcsurl.git")
 	rawRoot, err = GetRawRoot(url)
 	AssertEqual(t, err, nil)
 	AssertEqual(t, rawRoot.String(), "https://raw.githubusercontent.com/alranel/go-vcsurl/master/")
