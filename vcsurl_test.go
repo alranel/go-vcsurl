@@ -154,13 +154,13 @@ func TestGitLab(t *testing.T) {
 	AssertEqual(t, IsRawRoot(url), false)
 
 	// Old style raw paths
-	url, _ = url.Parse("https://riuso.comune.salerno.it/root/simel_2/raw/master/publiccode.yml")
+	url, _ = url.Parse("https://gitlab.consiglio.puglia.it/root/didoc4/raw/master/publiccode.yml")
 	AssertEqual(t, IsRawFile(url), true)
 	url, _ = url.Parse("http://gitlab.fuss.bz.it/fuss/fuss-metadata/raw/master/publiccode.yml")
 	AssertEqual(t, GetRepo(url).String(), "http://gitlab.fuss.bz.it/fuss/fuss-metadata")
-	url, _ = url.Parse("https://riuso.comune.salerno.it/root/simel_2/raw/master/")
+	url, _ = url.Parse("https://gitlab.consiglio.puglia.it/root/didoc4/raw/master/")
 	AssertEqual(t, IsRawRoot(url), true)
-	url, _ = url.Parse("https://riuso.comune.salerno.it/")
+	url, _ = url.Parse("https://gitlab.consiglio.puglia.it/")
 	AssertEqual(t, IsRawRoot(url), false)
 
 	url, _ = url.Parse("http://gitlab.fuss.bz.it/fuss/fuss-metadata/raw/master/")
@@ -168,7 +168,7 @@ func TestGitLab(t *testing.T) {
 	url, _ = url.Parse("http://gitlab.fuss.bz.it/fuss/fuss-metadata")
 	AssertEqual(t, GetRepo(url).String(), "http://gitlab.fuss.bz.it/fuss/fuss-metadata")
 
-	url, _ = url.Parse("https://riuso.comune.salerno.it/root/simel_2/blob/master/publiccode.yml")
+	url, _ = url.Parse("https://gitlab.consiglio.puglia.it/root/didoc4/blob/master/publiccode.yml")
 	AssertEqual(t, IsFile(url), true)
 	AssertEqual(t, IsRepo(url), false)
 	AssertEqual(t, IsRawFile(url), false)
