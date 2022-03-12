@@ -12,7 +12,7 @@ provides functions for converting file URLs to raw URLs and root raw URLs.
 ## Install
 
 ```bash
-go get github.com/alranel/go-vcsurl
+go get github.com/alranel/go-vcsurl/v2
 ```
 
 ## Author
