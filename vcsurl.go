@@ -118,7 +118,7 @@ func IsRepo(url *url.URL) bool {
 			return true
 		}
 	} else if url.Host == "bitbucket.org" {
-		if ok, _ := regexp.MatchString("^/[^/]+/[^/]+$", url.Path); ok {
+		if ok, _ := regexp.MatchString("^/[^/]+/[^/]+/?$", url.Path); ok {
 			return true
 		}
 	} else if IsGitLab(url) {
@@ -254,7 +254,7 @@ func GetRawRoot(url *url.URL, branch ...string) (*url.URL, error) {
 
 			return url, nil
 		} else if url.Host == "bitbucket.org" {
-			url, _ := url.Parse(fmt.Sprintf("%s/raw/%s/", url.String(), defaultBranch))
+			url, _ := url.Parse(fmt.Sprintf("https://bitbucket.org%s/", path.Join(url.Path, "raw", defaultBranch)))
 
 			return url, nil
 		} else if IsGitLab(url) {

@@ -81,22 +81,28 @@ func TestBitBucket(t *testing.T) {
 	AssertEqual(t, IsAccount(url), true)
 	AssertNil(t, GetRepo(url))
 
-	url, _ = url.Parse("https://bitbucket.org/Comune_Venezia/whistleblowing")
-	AssertEqual(t, IsBitBucket(url), true)
-	AssertEqual(t, IsRawFile(url), false)
-	AssertEqual(t, IsRepo(url), true)
-	AssertEqual(t, IsAccount(url), false)
-	AssertEqual(t, GetRepo(url).String(), url.String())
-	rawRoot, err := GetRawRoot(url)
-	AssertEqual(t, err, nil)
-	AssertEqual(t, rawRoot.String(), "https://bitbucket.org/Comune_Venezia/whistleblowing/raw/master/")
+	validRepos := []string{
+		"https://bitbucket.org/Comune_Venezia/whistleblowing/",
+		"https://bitbucket.org/Comune_Venezia/whistleblowing",
+	}
+	for _, repo := range validRepos {
+		url, _ = url.Parse(repo)
+		AssertEqual(t, IsBitBucket(url), true)
+		AssertEqual(t, IsRawFile(url), false)
+		AssertEqual(t, IsRepo(url), true)
+		AssertEqual(t, IsAccount(url), false)
+		AssertEqual(t, GetRepo(url).String(), url.String())
+		rawRoot, err := GetRawRoot(url)
+		AssertEqual(t, err, nil)
+		AssertEqual(t, rawRoot.String(), "https://bitbucket.org/Comune_Venezia/whistleblowing/raw/master/")
+	}
 
 	url, _ = url.Parse("https://bitbucket.org/Comune_Venezia/whistleblowing/src/master/LICENSE")
 	AssertEqual(t, IsFile(url), true)
 	AssertEqual(t, IsRepo(url), false)
 	AssertEqual(t, IsRawFile(url), false)
 	AssertEqual(t, GetRawFile(url).String(), "https://bitbucket.org/Comune_Venezia/whistleblowing/raw/master/LICENSE")
-	rawRoot, err = GetRawRoot(url)
+	rawRoot, err := GetRawRoot(url)
 	AssertEqual(t, err, nil)
 	AssertEqual(t, rawRoot.String(), "https://bitbucket.org/Comune_Venezia/whistleblowing/raw/master/")
 	AssertEqual(t, IsRawRoot(rawRoot), true)
