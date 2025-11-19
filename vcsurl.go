@@ -114,7 +114,7 @@ func IsAccount(url *url.URL) bool {
 // IsRepo returns true if the supplied URL points to the root page of a repository.
 func IsRepo(url *url.URL) bool {
 	if url.Host == "github.com" {
-		if ok, _ := regexp.MatchString("^/[^/]+/[^/]+$", url.Path); ok {
+		if ok, _ := regexp.MatchString("^/[^/]+/[^/]+[^/]*?/?$", url.Path); ok {
 			return true
 		}
 	} else if url.Host == "bitbucket.org" {
@@ -271,7 +271,9 @@ func GetRawRoot(url *url.URL, branch ...string) (*url.URL, error) {
 func GetRepo(url *url.URL) *url.URL {
 	if IsRepo(url) {
 		u := *url
-		u.Path = strings.TrimSuffix(url.Path, ".git")
+		p := strings.TrimRight(url.Path, "/")
+		p = strings.TrimSuffix(p, ".git")
+		u.Path = p
 
 		return &u
 	}
