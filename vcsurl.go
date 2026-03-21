@@ -12,6 +12,64 @@ import (
 
 var gitlabDomains = make(map[string]bool)
 
+type giteaPlatform int8
+
+const (
+	platformNone    giteaPlatform = iota + 1
+	platformForgejo
+	platformGitea
+)
+
+// giteaLikeDomains caches per-host detection results.
+var giteaLikeDomains = make(map[string]giteaPlatform)
+
+// detectGiteaLike probes a host to determine whether it runs Forgejo or Gitea.
+// It reads the first 512 bytes of /swagger.v1.json and looks for the API title.
+func detectGiteaLike(u *url.URL) giteaPlatform {
+	if p, seen := giteaLikeDomains[u.Host]; seen {
+		return p
+	}
+
+	url2, _ := u.Parse(u.String())
+	url2.Path = "/swagger.v1.json"
+
+	req, err := http.NewRequest("GET", url2.String(), nil)
+	if err != nil {
+		return 0
+	}
+	req.Header.Set("Range", "bytes=0-511")
+
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return 0
+	}
+	defer resp.Body.Close()
+
+	buf := make([]byte, 512)
+	n, _ := resp.Body.Read(buf)
+	body := string(buf[:n])
+
+	p := platformNone
+	if strings.Contains(body, `"Forgejo API"`) {
+		p = platformForgejo
+	} else if strings.Contains(body, `"Gitea API"`) {
+		p = platformGitea
+	}
+
+	giteaLikeDomains[u.Host] = p
+	return p
+}
+
+// IsForgeJo returns true if the supplied URL belongs to a Forgejo instance.
+func IsForgeJo(u *url.URL) bool {
+	return detectGiteaLike(u) == platformForgejo
+}
+
+// IsGitea returns true if the supplied URL belongs to a Gitea instance.
+func IsGitea(u *url.URL) bool {
+	return detectGiteaLike(u) == platformGitea
+}
+
 // IsGitHub returns true if the supplied URL belongs to GitHub.
 func IsGitHub(url *url.URL) bool {
 	return url.Host == "github.com" || url.Host == "raw.githubusercontent.com"
@@ -107,6 +165,10 @@ func IsAccount(url *url.URL) bool {
 		if ok, _ := regexp.MatchString("^/[^/]+/?$", url.Path); ok {
 			return true
 		}
+	} else if IsForgeJo(url) || IsGitea(url) {
+		if ok, _ := regexp.MatchString("^/[^/]+/?$", url.Path); ok {
+			return true
+		}
 	}
 	return false
 }
@@ -126,6 +188,10 @@ func IsRepo(url *url.URL) bool {
 			if ok, _ := regexp.MatchString("/(blob|raw)/", url.Path); !ok {
 				return true
 			}
+		}
+	} else if IsForgeJo(url) || IsGitea(url) {
+		if ok, _ := regexp.MatchString("^/[^/]+/[^/]+/?$", url.Path); ok {
+			return true
 		}
 	} else if IsHttpRepo(url) {
 		return true
@@ -147,6 +213,10 @@ func IsFile(url *url.URL) bool {
 		if ok, _ := regexp.MatchString("^(/[^/]+)+/(-/)?blob/[^/]+/.+$", url.Path); ok {
 			return true
 		}
+	} else if IsForgeJo(url) || IsGitea(url) {
+		if ok, _ := regexp.MatchString("^/[^/]+/[^/]+/src/branch/[^/]+/.+$", url.Path); ok {
+			return true
+		}
 	}
 	return false
 }
@@ -165,6 +235,10 @@ func IsRawFile(url *url.URL) bool {
 		}
 	} else if IsGitLab(url) {
 		if ok, _ := regexp.MatchString("^(/[^/]+)+/(-/)?raw/[^/]+/.+$", url.Path); ok {
+			return true
+		}
+	} else if IsForgeJo(url) || IsGitea(url) {
+		if ok, _ := regexp.MatchString("^/[^/]+/[^/]+/raw/branch/[^/]+/.+$", url.Path); ok {
 			return true
 		}
 	}
@@ -189,6 +263,10 @@ func GetRawFile(url *url.URL) *url.URL {
 		re := regexp.MustCompile("^(https?://.+?(?:/[^/]+)+?)/(?:-/)?blob/([^/]+/.+)$")
 		url, _ := url.Parse(re.ReplaceAllString(url.String(), "$1/raw/$2"))
 		return url
+	} else if IsForgeJo(url) || IsGitea(url) {
+		re := regexp.MustCompile("^(https?://[^/]+/[^/]+/[^/]+)/src/branch/(.+)$")
+		url, _ := url.Parse(re.ReplaceAllString(url.String(), "$1/raw/branch/$2"))
+		return url
 	}
 	return nil
 }
@@ -207,6 +285,10 @@ func IsRawRoot(url *url.URL) bool {
 		}
 	} else if IsGitLab(url) {
 		if ok, _ := regexp.MatchString("^(/[^/]+)+/(-/)?raw/[^/]+/?$", url.Path); ok {
+			return true
+		}
+	} else if IsForgeJo(url) || IsGitea(url) {
+		if ok, _ := regexp.MatchString("^/[^/]+/[^/]+/raw/branch/[^/]+/?$", url.Path); ok {
 			return true
 		}
 	}
@@ -228,6 +310,10 @@ func GetRawRoot(url *url.URL, branch ...string) (*url.URL, error) {
 			return url, nil
 		} else if IsGitLab(url) {
 			re := regexp.MustCompile("^(https?://.+?(?:/[^/]+)+/(-/)?raw/[^/]+).*$")
+			url, _ := url.Parse(re.ReplaceAllString(url.String(), "$1/"))
+			return url, nil
+		} else if IsForgeJo(url) || IsGitea(url) {
+			re := regexp.MustCompile("^(https?://[^/]+/[^/]+/[^/]+/raw/branch/[^/]+).*$")
 			url, _ := url.Parse(re.ReplaceAllString(url.String(), "$1/"))
 			return url, nil
 		}
@@ -261,6 +347,12 @@ func GetRawRoot(url *url.URL, branch ...string) (*url.URL, error) {
 			url, _ := url.Parse(fmt.Sprintf("%s/-/raw/%s/", url.String(), defaultBranch))
 
 			return url, nil
+		} else if IsForgeJo(url) || IsGitea(url) {
+			u := *url
+			u.Path = strings.TrimSuffix(u.Path, ".git")
+			url, _ := url.Parse(fmt.Sprintf("%s/raw/branch/%s/", u.String(), defaultBranch))
+
+			return url, nil
 		}
 	}
 
@@ -289,6 +381,10 @@ func GetRepo(url *url.URL) *url.URL {
 			return url
 		} else if IsGitLab(url) {
 			re := regexp.MustCompile("^(https?://.+?(?:/[^/]+)+?)/(-/)?raw/.*$")
+			url, _ := url.Parse(re.ReplaceAllString(url.String(), "$1"))
+			return url
+		} else if IsForgeJo(url) || IsGitea(url) {
+			re := regexp.MustCompile("^(https?://[^/]+/[^/]+/[^/]+)/(?:src|raw)/branch/.*$")
 			url, _ := url.Parse(re.ReplaceAllString(url.String(), "$1"))
 			return url
 		}

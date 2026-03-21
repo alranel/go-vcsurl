@@ -186,6 +186,78 @@ func TestGitLab(t *testing.T) {
 	AssertEqual(t, IsRawFile(url), false)
 }
 
+func TestForgeJo(t *testing.T) {
+	url, _ := url.Parse("https://codeberg.org/Codeberg")
+	AssertEqual(t, IsForgeJo(url), true)
+	AssertEqual(t, IsRawFile(url), false)
+	AssertEqual(t, IsRepo(url), false)
+	AssertEqual(t, IsAccount(url), true)
+	AssertNil(t, GetRepo(url))
+
+	url, _ = url.Parse("https://codeberg.org/Codeberg/Community")
+	AssertEqual(t, IsForgeJo(url), true)
+	AssertEqual(t, IsRawFile(url), false)
+	AssertEqual(t, IsRepo(url), true)
+	AssertEqual(t, IsAccount(url), false)
+	AssertEqual(t, GetRepo(url).String(), url.String())
+	rawRoot, err := GetRawRoot(url, "main")
+	AssertEqual(t, err, nil)
+	AssertEqual(t, rawRoot.String(), "https://codeberg.org/Codeberg/Community/raw/branch/main/")
+
+	url, _ = url.Parse("https://codeberg.org/Codeberg/Community/src/branch/main/README.md")
+	AssertEqual(t, IsFile(url), true)
+	AssertEqual(t, IsRepo(url), false)
+	AssertEqual(t, IsRawFile(url), false)
+	AssertEqual(t, GetRawFile(url).String(), "https://codeberg.org/Codeberg/Community/raw/branch/main/README.md")
+	rawRoot, err = GetRawRoot(url)
+	AssertEqual(t, err, nil)
+	AssertEqual(t, rawRoot.String(), "https://codeberg.org/Codeberg/Community/raw/branch/main/")
+	AssertEqual(t, IsRawRoot(rawRoot), true)
+	AssertEqual(t, GetRepo(url).String(), "https://codeberg.org/Codeberg/Community")
+	AssertEqual(t, GetRepo(rawRoot).String(), "https://codeberg.org/Codeberg/Community")
+
+	url, _ = url.Parse("https://codeberg.org/Codeberg/Community/raw/branch/main/README.md")
+	AssertEqual(t, IsRawFile(url), true)
+	url, _ = url.Parse("https://codeberg.org/Codeberg/Community/raw/branch/main/")
+	AssertEqual(t, IsRawRoot(url), true)
+}
+
+func TestGitea(t *testing.T) {
+	url, _ := url.Parse("https://gitea.com/gitea")
+	AssertEqual(t, IsGitea(url), true)
+	AssertEqual(t, IsRawFile(url), false)
+	AssertEqual(t, IsRepo(url), false)
+	AssertEqual(t, IsAccount(url), true)
+	AssertNil(t, GetRepo(url))
+
+	url, _ = url.Parse("https://gitea.com/gitea/tea")
+	AssertEqual(t, IsGitea(url), true)
+	AssertEqual(t, IsRawFile(url), false)
+	AssertEqual(t, IsRepo(url), true)
+	AssertEqual(t, IsAccount(url), false)
+	AssertEqual(t, GetRepo(url).String(), url.String())
+	rawRoot, err := GetRawRoot(url, "main")
+	AssertEqual(t, err, nil)
+	AssertEqual(t, rawRoot.String(), "https://gitea.com/gitea/tea/raw/branch/main/")
+
+	url, _ = url.Parse("https://gitea.com/gitea/tea/src/branch/main/README.md")
+	AssertEqual(t, IsFile(url), true)
+	AssertEqual(t, IsRepo(url), false)
+	AssertEqual(t, IsRawFile(url), false)
+	AssertEqual(t, GetRawFile(url).String(), "https://gitea.com/gitea/tea/raw/branch/main/README.md")
+	rawRoot, err = GetRawRoot(url)
+	AssertEqual(t, err, nil)
+	AssertEqual(t, rawRoot.String(), "https://gitea.com/gitea/tea/raw/branch/main/")
+	AssertEqual(t, IsRawRoot(rawRoot), true)
+	AssertEqual(t, GetRepo(url).String(), "https://gitea.com/gitea/tea")
+	AssertEqual(t, GetRepo(rawRoot).String(), "https://gitea.com/gitea/tea")
+
+	url, _ = url.Parse("https://gitea.com/gitea/tea/raw/branch/main/README.md")
+	AssertEqual(t, IsRawFile(url), true)
+	url, _ = url.Parse("https://gitea.com/gitea/tea/raw/branch/main/")
+	AssertEqual(t, IsRawRoot(url), true)
+}
+
 // AssertEqual checks if values are equal
 func AssertEqual(t *testing.T, a interface{}, b interface{}) {
 	if a == b {
