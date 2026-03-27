@@ -10,6 +10,10 @@ import (
 	"strings"
 )
 
+// Client is the HTTP client used for all network requests made by this package.
+// Replace it to set a timeout or use a custom transport.
+var Client = http.DefaultClient
+
 var gitlabDomains = make(map[string]bool)
 
 type giteaPlatform int8
@@ -39,7 +43,7 @@ func detectGiteaLike(u *url.URL) giteaPlatform {
 	}
 	req.Header.Set("Range", "bytes=0-511")
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := Client.Do(req)
 	if err != nil {
 		return 0
 	}
@@ -95,7 +99,7 @@ func IsGitLab(url *url.URL) bool {
 	// for the _gitlab_session cookie.
 	url2, _ := url.Parse(url.String())
 	url2.Path = "/api"
-	resp, err := http.Get(url2.String())
+	resp, err := Client.Get(url2.String())
 	if err == nil {
 		for _, cookie := range resp.Cookies() {
 			if cookie.Name == "_gitlab_session" {
@@ -121,7 +125,7 @@ func gitRefs(url url.URL) url.URL {
 func gitDefaultBranch(url url.URL) (string, error) {
 	refs := gitRefs(url)
 
-	resp, err := http.Get(refs.String())
+	resp, err := Client.Get(refs.String())
 	if err != nil {
 		return "", err
 	}
@@ -143,7 +147,7 @@ func gitDefaultBranch(url url.URL) (string, error) {
 func IsHttpRepo(url *url.URL) bool {
 	refs := gitRefs(*url)
 
-	resp, err := http.Head(refs.String())
+	resp, err := Client.Head(refs.String())
 	if err == nil {
 		return resp.StatusCode >= 200 && resp.StatusCode <= 299
 	}
