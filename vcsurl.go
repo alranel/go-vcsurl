@@ -14,6 +14,8 @@ import (
 // Replace it to set a timeout or use a custom transport.
 var Client = http.DefaultClient
 
+// gitlabDomains caches probe results for custom GitLab domains.
+// true = confirmed GitLab, false = confirmed non-GitLab (negative result cached to avoid repeated probes).
 var gitlabDomains = make(map[string]bool)
 
 type giteaPlatform int8
@@ -90,9 +92,9 @@ func IsGitLab(url *url.URL) bool {
 		return true
 	}
 
-	// Did we already validate this URL as a GitLab site?
-	if _, seen := gitlabDomains[url.Host]; seen {
-		return true
+	// Return cached result (positive or negative) to avoid repeated probes.
+	if result, seen := gitlabDomains[url.Host]; seen {
+		return result
 	}
 
 	// Detect GitLab running on custom domains by performing a HTTP request and looking
@@ -109,6 +111,7 @@ func IsGitLab(url *url.URL) bool {
 		}
 	}
 
+	gitlabDomains[url.Host] = false
 	return false
 }
 
