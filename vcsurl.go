@@ -2,12 +2,13 @@ package vcsurl
 
 import (
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"path"
 	"regexp"
 	"strings"
+	"sync"
 )
 
 // Client is the HTTP client used for all network requests made by this package.
@@ -16,7 +17,7 @@ var Client = http.DefaultClient
 
 // gitlabDomains caches probe results for custom GitLab domains.
 // true = confirmed GitLab, false = confirmed non-GitLab (negative result cached to avoid repeated probes).
-var gitlabDomains = make(map[string]bool)
+var gitlabDomains sync.Map
 
 type giteaPlatform int8
 
@@ -27,13 +28,13 @@ const (
 )
 
 // giteaLikeDomains caches per-host detection results.
-var giteaLikeDomains = make(map[string]giteaPlatform)
+var giteaLikeDomains sync.Map
 
 // detectGiteaLike probes a host to determine whether it runs Forgejo or Gitea.
 // It reads the first 512 bytes of /swagger.v1.json and looks for the API title.
 func detectGiteaLike(u *url.URL) giteaPlatform {
-	if p, seen := giteaLikeDomains[u.Host]; seen {
-		return p
+	if v, seen := giteaLikeDomains.Load(u.Host); seen {
+		return v.(giteaPlatform)
 	}
 
 	url2, _ := u.Parse(u.String())
@@ -62,7 +63,7 @@ func detectGiteaLike(u *url.URL) giteaPlatform {
 		p = platformGitea
 	}
 
-	giteaLikeDomains[u.Host] = p
+	giteaLikeDomains.Store(u.Host, p)
 	return p
 }
 
@@ -93,8 +94,8 @@ func IsGitLab(url *url.URL) bool {
 	}
 
 	// Return cached result (positive or negative) to avoid repeated probes.
-	if result, seen := gitlabDomains[url.Host]; seen {
-		return result
+	if v, seen := gitlabDomains.Load(url.Host); seen {
+		return v.(bool)
 	}
 
 	// Detect GitLab running on custom domains by performing a HTTP request and looking
@@ -103,15 +104,17 @@ func IsGitLab(url *url.URL) bool {
 	url2.Path = "/api"
 	resp, err := Client.Get(url2.String())
 	if err == nil {
+		defer resp.Body.Close()
+
 		for _, cookie := range resp.Cookies() {
 			if cookie.Name == "_gitlab_session" {
-				gitlabDomains[url.Host] = true
+				gitlabDomains.Store(url.Host, true)
 				return true
 			}
 		}
 	}
 
-	gitlabDomains[url.Host] = false
+	gitlabDomains.Store(url.Host, false)
 	return false
 }
 
@@ -134,7 +137,7 @@ func gitDefaultBranch(url url.URL) (string, error) {
 	}
 
 	defer resp.Body.Close()
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 
 	re := regexp.MustCompile(`(?m)^[0-9a-fA-F]+ HEAD.+symref=HEAD:refs\/heads\/(.+?) .*\n`)
 	matches := re.FindStringSubmatch(string(body))
